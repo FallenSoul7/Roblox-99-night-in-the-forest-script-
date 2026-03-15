@@ -513,49 +513,44 @@ rg4.Parent = scroll
 -------------------------------------------------
 -- Helpers for original sizes
 -------------------------------------------------
-local function recordOriginalHandle(tool)
-	if not tool or not tool:IsA("Tool") then return end
-	local handle = tool:FindFirstChild("Handle")
-	if handle and originalHandleSizes[tool] == nil then
-		originalHandleSizes[tool] = handle.Size
-	end
-end
-
 local reachMult = 1
 
 function applyRangeMult(mult)
 	reachMult = mult or 1
+end
+
+-- Run every frame to damage all humanoids in range, ignoring walls
+RunService.RenderStepped:Connect(function()
+	if reachMult <= 1 then return end
 
 	local char = player.Character
 	if not char then return end
+	local root = char:FindFirstChild("HumanoidRootPart")
+	if not root then return end
 
-	for _,tool in pairs(char:GetChildren()) do
-		if tool:IsA("Tool") then
-			local handle = tool:FindFirstChild("Handle")
-			if handle then
-				handle.Size = Vector3.new(1,1,1) * (reachMult * 4)
+	for _, v in pairs(workspace:GetDescendants()) do
+		local hum = v:FindFirstChildOfClass("Humanoid")
+		if hum and v ~= char then
+			local part = v:FindFirstChild("HumanoidRootPart")
+			if part then
+				local dist = (root.Position - part.Position).Magnitude
+				if dist <= 8 * reachMult then
+					-- Damage directly without worrying about walls
+					hum:TakeDamage(10) -- increase if you want stronger hits
+				end
 			end
 		end
 	end
-end
-
-player.CharacterAdded:Connect(function(char)
-	char.ChildAdded:Connect(function(obj)
-		if obj:IsA("Tool") then
-			task.wait(0.1)
-			applyRangeMult(reachMult)
-		end
-	end)
 end)
-
 
 -------------------------------------------------
 -- PAGE SWITCH
 -------------------------------------------------
-
 local function hideAllAttackExtras()
 	sp1.Visible=false; sp2.Visible=false; sp3.Visible=false; sp4.Visible=false
 	rg1.Visible=false; rg2.Visible=false; rg3.Visible=false; rg4.Visible=false
+	lightBtn.Visible=false
+	infJumpBtn.Visible=false
 end
 
 local function showHome()
@@ -600,6 +595,8 @@ end
 
 local function showAttack()
 
+	hideAllAttackExtras()
+
 	playerBtn.Visible=false
 	animalBtn.Visible=false
 	chestBtn.Visible=false
@@ -617,7 +614,6 @@ local function showAttack()
 	lightBtn.Visible=true
 	infJumpBtn.Visible=true
 
-	hideAllAttackExtras()
 end
 
 homeBtn.MouseButton1Click:Connect(showHome)
